@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlixOrbit - Discover & Explore Movies</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Open+Sans&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <a href="#" id="homeLogoLink" class="logo" tabindex="0" aria-label="FlixOrbit home">
+      <span aria-hidden="true">🎬</span>
+      <span class="logo-text">FlixOrbit</span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="about.html" class="nav-link">About</a>
+    </nav>
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark and light theme" type="button" title="Toggle Theme"></button>
+  </header>
+
+  <main class="app-main">
+    <section class="intro-section" role="banner">
+      <h1 class="intro-title">Discover the World's Finest Movies</h1>
+      <p class="intro-description">Explore trending hits, personalized searches, and watch exclusive trailers.</p>
+      <form id="searchForm" class="search-form" autocomplete="off" novalidate role="search">
+        <input
+          type="search"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search movies, actors, genres..."
+          aria-label="Search movies"
+          spellcheck="false"
+          autofocus
+          autocomplete="off"
+        />
+        <button type="submit" class="button primary-button">Search</button>
+      </form>
+      <div class="filter-controls" aria-label="Filter movies by genre and language">
+        <label for="genreFilter" class="visually-hidden">Select Genre</label>
+        <select id="genreFilter" class="filter-select" aria-controls="resultsSection"></select>
+        <label for="langFilter" class="visually-hidden">Select Language</label>
+        <select id="langFilter" class="filter-select" aria-controls="resultsSection"></select>
+      </div>
+    </section>
+
+    <section id="resultsSection" class="results-grid" aria-live="polite" aria-busy="false" role="region" aria-label="Movie search results">
+      </section>
+
+    <div id="noResults" class="no-results" role="alert" hidden>
+      No movies found matching your criteria. Try a different search or filters!
+    </div>
+
+    <div id="scrollSentinel" class="scroll-sentinel" hidden></div>
+  </main>
+
+  <footer class="app-footer">
+    <span>© 2025 FlixOrbit. Crafted with care for movie enthusiasts.</span>
+    <span class="cinematic-credit">Made by @SuryaPrabhas</span>
+  </footer>
+
+  <aside id="movieDetailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden tabindex="-1">
+    <div class="modal-content">
+      <!-- The close button is now part of the static HTML for easier handling -->
+      <button id="modalCloseBtn" class="modal-close-button" aria-label="Close movie details" type="button" title="Close Details">×</button>
+      <div id="movieDetailContent" class="modal-body">
+        <!-- Movie details will be loaded here dynamically -->
+      </div>
+    </div>
+  </aside>
+
+  <div id="loaderOverlay" class="loader-overlay" hidden aria-hidden="true" role="status" aria-label="Loading movies">
+    <div class="popcorn-loader" aria-hidden="true">
+      <div class="pop-bucket"></div>
+      <div class="popcorn"></div>
+      <div class="popcorn"></div>
+      <div class="popcorn"></div>
+    </div>
+    <div class="loader-text">Loading movies...</div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
