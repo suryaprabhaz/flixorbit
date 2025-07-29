@@ -21,3 +21,11 @@ Check out the live demo here: [FlixOrbit](https://flixorbit.netlify.app)
 - React / Vue / Angular (adjust based on your actual tech)
 - Movie database API integration (e.g., TMDB or similar)
 - Responsive design principles
+
+## Installation
+
+Follow the steps below to set up FlixOrbit locally:
+
+
+```bash
+git clone https://github.com/your-username/flixorbit.git && cd flixorbit && npm install && npm start
