@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FlixOrbit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+header {
+  padding: 12px 16px;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.search-box {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 30px;
+  width: 300px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.suggestions {
+  background: #1a1a1a;
+  border-radius: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+
+.suggestions div {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+}
+
+.suggestions div:hover {
+  background: #333;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 30px rgba(229,9,20,0.45);
+}
+
+.card img {
+  width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.96);
+  overflow-y: auto;
+  z-index: 50;
+  padding: 20px;
+}
+
+.exit {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #e50914;
+  border: none;
+  color: #fff;
+  padding: 8px 14px;
+  cursor: pointer;
+  z-index: 100;
+}
+
+.content {
+  max-width: 1000px;
+  margin: auto;
+}
+
+.details-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.details-row img {
+  width: 280px;
+  border-radius: 8px;
+}
+
+.cast {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.cast div {
+  min-width: 120px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.cast img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.trailer iframe {
+  width: 100%;
+  height: 420px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.providers {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.provider {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.provider:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 12px rgba(229,9,20,0.6);
+}
+
+.provider img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1 onclick="goHome()">🎬 FlixOrbit</h1>
+  <div class="search-container">
+    <div class="search-icon" onclick="toggleSearch()">🔍</div>
+    <div class="search-box" id="searchBox">
+      <input id="searchInput" placeholder="Search movies or actors">
+      <div id="suggestions" class="suggestions"></div>
+    </div>
+  </div>
+</header>
+
+<div id="movies" class="grid"></div>
+
+<script>
+const API_KEY = "07593288b7c70475b39caecfe7054e07";
+const BASE = "https://api.themoviedb.org/3";
+const IMG = "https://image.tmdb.org/t/p/w500";
+const FALLBACK = "https://via.placeholder.com/300x450?text=No+Image";
+
+const PROVIDER_URLS = {
+  Netflix: q => `https://www.netflix.com/search?q=${encodeURIComponent(q)}`,
+  "Amazon Prime Video": q => `https://www.primevideo.com/search?k=${encodeURIComponent(q)}`,
+  Disney: q => `https://www.disneyplus.com/search?q=${encodeURIComponent(q)}`,
+  "Disney Plus": q => `https://www.disneyplus.com/search?q=${encodeURIComponent(q)}`,
+  Hotstar: q => `https://www.hotstar.com/in/search?q=${encodeURIComponent(q)}`,
+  "Apple TV": q => `https://tv.apple.com/search?term=${encodeURIComponent(q)}`,
+  Zee5: q => `https://www.zee5.com/search?q=${encodeURIComponent(q)}`,
+  "Sony LIV": q => `https://www.sonyliv.com/search/${encodeURIComponent(q)}`
+};
+
+let page = 1;
+let loading = false;
+let searchTimer;
+
+const grid = document.getElementById("movies");
+const searchBox = document.getElementById("searchBox");
+const searchInput = document.getElementById("searchInput");
+const suggestions = document.getElementById("suggestions");
+
+function toggleSearch() {
+  searchBox.style.display = searchBox.style.display === "block" ? "none" : "block";
+  searchInput.focus();
+}
+
+function goHome() {
+  document.querySelectorAll(".overlay").forEach(o => o.remove());
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".overlay").forEach(o => o.remove());
+  }
+});
+
+function money(n) {
+  return n && n > 0 ? "$" + n.toLocaleString() : "N/A";
+}
+
+async function loadMovies() {
+  if (loading) return;
+  loading = true;
+  try {
+    const res = await fetch(`${BASE}/movie/popular?api_key=${API_KEY}&page=${page}`);
+    const data = await res.json();
+    if (!data.results?.length) return;
+
+    data.results.forEach(m => {
+      const d = document.createElement("div");
+      d.className = "card";
+      d.innerHTML = `<img src="${m.poster_path ? IMG + m.poster_path : FALLBACK}">`;
+      d.onclick = () => openMovie(m.id);
+      grid.appendChild(d);
+    });
+    page++;
+  } finally {
+    loading = false;
+  }
+}
+
+async function openMovie(id) {
+  document.querySelectorAll(".overlay").forEach(o => o.remove());
+
+  const [m, c, v, w] = await Promise.all([
+    fetch(`${BASE}/movie/${id}?api_key=${API_KEY}`).then(r => r.json()),
+    fetch(`${BASE}/movie/${id}/credits?api_key=${API_KEY}`).then(r => r.json()),
+    fetch(`${BASE}/movie/${id}/videos?api_key=${API_KEY}`).then(r => r.json()),
+    fetch(`${BASE}/movie/${id}/watch/providers?api_key=${API_KEY}`).then(r => r.json())
+  ]);
+
+  const trailer = v.results?.find(x => x.site === "YouTube" && x.type === "Trailer");
+  const providers = w.results?.IN?.flatrate || [];
+
+  const o = document.createElement("div");
+  o.className = "overlay";
+  o.innerHTML = `
+    <button class="exit">✕</button>
+    <div class="content">
+      <div class="details-row">
+        <img src="${m.poster_path ? IMG + m.poster_path : FALLBACK}">
+        <div>
+          <h1>${m.title}</h1>
+          <p>${m.overview}</p>
+          <p><b>Runtime:</b> ${m.runtime ? m.runtime + " min" : "N/A"}</p>
+          <p><b>Budget:</b> ${money(m.budget)}</p>
+          <p><b>Revenue:</b> ${money(m.revenue)}</p>
+
+          ${providers.length ? `
+            <h3>Available on</h3>
+            <div class="providers">
+              ${providers.map(p => {
+                const link = PROVIDER_URLS[p.provider_name]
+                  ? PROVIDER_URLS[p.provider_name](m.title)
+                  : `https://www.google.com/search?q=${encodeURIComponent(m.title + " " + p.provider_name)}`;
+                return `
+                  <div class="provider" title="${p.provider_name}" onclick="window.open('${link}','_blank')">
+                    <img src="https://image.tmdb.org/t/p/w92${p.logo_path}">
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          ` : ""}
+        </div>
+      </div>
+
+      <h2>Cast</h2>
+      <div class="cast">
+        ${c.cast.slice(0,10).map(a => `
+          <div onclick="openActor(${a.id})">
+            <img src="${a.profile_path ? IMG + a.profile_path : FALLBACK}">
+            <div>${a.name}</div>
+          </div>
+        `).join("")}
+      </div>
+
+      ${trailer ? `
+        <h2 style="margin-top:20px">Trailer</h2>
+        <div class="trailer">
+          <iframe src="https://www.youtube-nocookie.com/embed/${trailer.key}?rel=0&modestbranding=1"
+            allowfullscreen></iframe>
+        </div>
+      ` : ""}
+    </div>
+  `;
+  o.querySelector(".exit").onclick = () => o.remove();
+  document.body.appendChild(o);
+}
+
+async function openActor(id) {
+  document.querySelectorAll(".overlay").forEach(o => o.remove());
+
+  const [p, cr] = await Promise.all([
+    fetch(`${BASE}/person/${id}?api_key=${API_KEY}`).then(r => r.json()),
+    fetch(`${BASE}/person/${id}/movie_credits?api_key=${API_KEY}`).then(r => r.json())
+  ]);
+
+  const o = document.createElement("div");
+  o.className = "overlay";
+  o.innerHTML = `
+    <button class="exit">✕</button>
+    <div class="content">
+      <div class="details-row">
+        <img src="${p.profile_path ? IMG + p.profile_path : FALLBACK}">
+        <div>
+          <h1>${p.name}</h1>
+          <p>${p.biography || "No biography available."}</p>
+        </div>
+      </div>
+    </div>
+  `;
+  o.querySelector(".exit").onclick = () => o.remove();
+  document.body.appendChild(o);
+}
+
+searchInput.addEventListener("input", e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const q = e.target.value.trim();
+    if (!q) return suggestions.innerHTML = "";
+
+    const [movies, people] = await Promise.all([
+      fetch(`${BASE}/search/movie?api_key=${API_KEY}&query=${q}`).then(r => r.json()),
+      fetch(`${BASE}/search/person?api_key=${API_KEY}&query=${q}`).then(r => r.json())
+    ]);
+
+    suggestions.innerHTML = "";
+
+    movies.results?.slice(0,4).forEach(m => {
+      const d = document.createElement("div");
+      d.textContent = "🎬 " + m.title;
+      d.onclick = () => { openMovie(m.id); searchBox.style.display="none"; };
+      suggestions.appendChild(d);
+    });
+
+    people.results?.slice(0,4).forEach(p => {
+      const d = document.createElement("div");
+      d.textContent = "👤 " + p.name;
+      d.onclick = () => { openActor(p.id); searchBox.style.display="none"; };
+      suggestions.appendChild(d);
+    });
+  }, 400);
+});
+
+window.addEventListener("scroll", () => {
+  if (window.innerHeight + window.scrollY > document.body.offsetHeight - 500) {
+    loadMovies();
+  }
+});
+
+loadMovies();
+</script>
+
+</body>
+</html>
