@@ -1,0 +1,21 @@
+name: FlixOrbit Quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate application
+        run: |
+          test -s index.html
+          grep -q '<!DOCTYPE html>' index.html
+          grep -q '<meta name="viewport"' index.html
+      - name: Check for private-key material
+        run: |
+          ! grep -RInE 'BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY' --exclude-dir=.git .
