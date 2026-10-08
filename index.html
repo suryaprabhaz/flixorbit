@@ -802,23 +802,60 @@
     // Fetch Utilities
     async function fetchData(endpoint) {
       try {
-        const res = await fetch(`${BASE_URL}${endpoint}&api_key=${API_KEY}`);
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const res = await fetch(BASE_URL + endpoint + separator + 'api_key=' + API_KEY, {
+          headers: { Accept: 'application/json' }
+        });
+        if (!res.ok) throw new Error('TMDB request failed: ' + res.status);
         return await res.json();
-      } catch (e) { console.error(e); return {}; }
+      } catch (e) {
+        console.error('FlixOrbit API error:', e);
+        showToast('Unable to load movie data');
+        return { results: [] };
+      }
     }
 
     function createCard(movie) {
       const div = document.createElement('div');
       div.className = 'card';
-      div.innerHTML = `
-        <img src="${movie.poster_path ? IMG_URL + movie.poster_path : 'https://via.placeholder.com/200x300'}" alt="${movie.title}" loading="lazy">
-        <div class="card-overlay">
-           <span style="font-weight:600; font-size: 0.9rem">${movie.title}</span>
-           <span style="font-size: 0.8rem; color:#ccc">${movie.release_date ? movie.release_date.split('-')[0] : ''}</span>
-        </div>
-        <button class="card-action" title="Add to Watchlist" onclick="event.stopPropagation(); toggleWatchlist({id:${movie.id}, title:'${movie.title.replace(/'/g, "\\'")}', poster_path:'${movie.poster_path}'})">+</button>
-      `;
-      div.onclick = () => openModal(movie.id);
+      div.setAttribute('role', 'button');
+      div.setAttribute('tabindex', '0');
+      div.setAttribute('aria-label', 'Open ' + (movie.title || 'movie'));
+
+      const img = document.createElement('img');
+      img.src = movie.poster_path ? IMG_URL + movie.poster_path : 'https://via.placeholder.com/200x300';
+      img.alt = movie.title || 'Movie poster';
+      img.loading = 'lazy';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'card-overlay';
+      const title = document.createElement('span');
+      title.style.cssText = 'font-weight:600; font-size:0.9rem';
+      title.textContent = movie.title || 'Untitled';
+      const year = document.createElement('span');
+      year.style.cssText = 'font-size:0.8rem; color:#ccc';
+      year.textContent = movie.release_date ? movie.release_date ? movie.release_date.split('-')[0] : '—' : '';
+
+      const action = document.createElement('button');
+      action.className = 'card-action';
+      action.type = 'button';
+      action.title = 'Add to Watchlist';
+      action.setAttribute('aria-label', 'Add ' + (movie.title || 'movie') + ' to watchlist');
+      action.textContent = '+';
+      action.addEventListener('click', event => {
+        event.stopPropagation();
+        toggleWatchlist({ id: movie.id, title: movie.title, poster_path: movie.poster_path });
+      });
+
+      overlay.append(title, year);
+      div.append(img, overlay, action);
+      div.addEventListener('click', () => openModal(movie.id));
+      div.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openModal(movie.id);
+        }
+      });
       return div;
     }
 
@@ -921,7 +958,7 @@
       document.getElementById('modalMeta').innerHTML = `
         <span class="tag">${movie.release_date.split('-')[0]}</span>
         <span class="tag">${movie.runtime} min</span>
-        <span>${movie.vote_average.toFixed(1)}/10</span>
+        <span>${Number.isFinite(movie.vote_average) ? movie.vote_average.toFixed(1) : '—'}/10</span>
       `;
 
       // Update Watchlist Button
@@ -973,6 +1010,14 @@
 
     document.getElementById('modal').addEventListener('click', (e) => {
       if (e.target === document.getElementById('modal')) closeModal();
+    });
+    
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        closeModal();
+        const search = document.getElementById('searchOverlay');
+        if (search.classList.contains('active')) toggleSearch();
+      }
     });
 
     // Search
