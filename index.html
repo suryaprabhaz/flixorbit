@@ -834,7 +834,7 @@
       title.textContent = movie.title || 'Untitled';
       const year = document.createElement('span');
       year.style.cssText = 'font-size:0.8rem; color:#ccc';
-      year.textContent = movie.release_date ? movie.release_date ? movie.release_date.split('-')[0] : '—' : '';
+      year.textContent = movie.release_date ? movie.release_date.split('-')[0] : '—';
 
       const action = document.createElement('button');
       action.className = 'card-action';
